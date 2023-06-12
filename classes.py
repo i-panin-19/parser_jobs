@@ -21,6 +21,9 @@ class CoreClasses(ABC):
 
 
 class GetApiHH(CoreClasses):
+    """
+    Класс для работы с API hh.ru
+    """
     url = 'https://api.hh.ru/vacancies'
     page = 0
 
@@ -33,6 +36,11 @@ class GetApiHH(CoreClasses):
         }
 
     def get_request(self):
+        """
+        Внутренний метод создания страницы со списком вакансий. Осуществляет запрос и возвращает страницу из 100 вакансий
+        :return:
+        """
+
         req = requests.get(self.url, self.params)
         data = req.content.decode()
         req.close()
@@ -41,6 +49,13 @@ class GetApiHH(CoreClasses):
         return data
 
     def get_vacancy(self):
+        """
+        Метод преобразует первые 10 страниц в справочник.
+        Каждая страница сохраняется под имененем текущей страницы в цикле.
+        Создаем новый документ, записываем в него ответ запроса, после закрываем.
+        :return:
+        """
+
         for page in range(0, 10):
             jsObject = json.loads(self.get_request())
             FileName = './HH_docs/{}.json'.format(len(os.listdir('./HH_docs')))
@@ -49,13 +64,20 @@ class GetApiHH(CoreClasses):
             f.write(json.dumps(jsObject, ensure_ascii=False))
             f.close()
 
+            #проверка на последнюю страницу, когда вакансий меньше 1000
             if (jsObject['pages'] - page) <= 1:
                 break
 
+            #небольшая задержка, во избежании перегрузки сервера
             time.sleep(0.25)
         print('Файлы HeadHunter собраны!')
 
     def clear_base(self):
+        """
+        Очистка папок со справочниками
+        :return:
+        """
+
         dirHH = os.listdir('./HH_docs')
         for f in dirHH:
             os.remove(os.path.join('./HH_docs', f))
@@ -94,6 +116,7 @@ class GetApiSJ(CoreClasses):
             f.write(json.dumps(jsObject, ensure_ascii=False))
             f.close()
 
+            #остановка цикла с пустыми страницами
             if len(jsObject) == 0:
                 break
 
@@ -107,6 +130,12 @@ class GetApiSJ(CoreClasses):
 
 
 class VacancyParser:
+    """
+    Класс для работы со справочниками.
+    Объекты класса помещаются во внутренние списки
+    """
+
+
     base_obj_hh = []
     base_obj_sj = []
     def __init__(self):
@@ -117,6 +146,14 @@ class VacancyParser:
         self.id = None
 
     def create_obj_hh(self):
+        """
+        Создание экземпляров класса.
+        Считывание страницы из папки.
+        Обработка строки, преобразование в читаемый вид.
+        Создание объекта и помещение его во внутренний список класса
+        :return:
+        """
+
         for fl in os.listdir('./HH_docs'):
             f = open('./HH_docs/{}'.format(fl), encoding='utf8')
             jsonText = f.read()
@@ -208,6 +245,14 @@ class VacancyParser:
         return self.base_obj_sj
 
     def print_obj(self, num_base):
+        """
+        Печать справочников.
+        Получение на вход номера справочника (0 для hh и 1 для sj)
+        :param num_base:
+        Преобразование данных в читаемые строки
+        :return:
+        """
+
         if num_base == 0:
             obj_base = self.base_obj_hh
         else:
@@ -233,16 +278,28 @@ class VacancyParser:
             )
 
     def user_salary_filt(self, s_from, s_to, num_base):
+        """
+        Небольшой фильтро по ЗП
+        Получение на вход ЗП от и до. А так же номера справочника.
+        :param s_from:
+        :param s_to:
+        :param num_base:
+        :return:
+        """
+
         if num_base == 0:
             obj_base = self.base_obj_hh
         else:
             obj_base = self.base_obj_sj
         num = 0
         for obj in obj_base:
+
+            #условие учитывает только полные данные по ЗП, 0 пропускается
             if (int(obj.salary[0]) != 0 and int(obj.salary[0]) >= s_from) and (int(obj.salary[1]) != 0 and int(obj.salary[1] <= s_to)):
                 tmp_str = f'от {obj.salary[0]} до {obj.salary[1]} {obj.salary[2]}'
                 num += 1
 
+                #вывод на экран прошедших условие данных
                 print(
                     f'{num} >>> {obj.vacancy}. -|- '
                     f'Опыт: {obj.experience}. -|- '
@@ -250,3 +307,9 @@ class VacancyParser:
                     f'ID: {obj.id} -|- '
                     f'URL: {obj.url}'
                 )
+
+    def __repr__(self):
+        return f"{self.__class__}: {self.vacancy}"
+
+    def __str__(self):
+        return f'{self.id}, {self.url}'
