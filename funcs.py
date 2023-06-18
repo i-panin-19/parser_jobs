@@ -10,7 +10,7 @@ def create_folders():
 
     if not os.path.isdir("HH_docs"):
         os.mkdir("HH_docs")
-    if not os.path.isdir("JS_docs"):
+    if not os.path.isdir("SJ_docs"):
         os.mkdir("SJ_docs")
 
 def user_input():
